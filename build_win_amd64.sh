@@ -1,0 +1,1 @@
+GOOS=windows GOARCH=amd64 go build -o ./bin/vodupload_win_amd64.exe

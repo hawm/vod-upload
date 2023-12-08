@@ -183,17 +183,52 @@ func cliParams() (string, string, string) {
 	return spaceName, inputDir, outputDir
 }
 
+func readConfigINI(path string) (string, string, error) {
+	cfg, err := ini.Load(path)
+	if err != nil {
+		return "", "", fmt.Errorf("error loading ini file: %v", err)
+	}
+
+	section := cfg.Section("default")
+	if section == nil {
+		return "", "", fmt.Errorf("default section not found")
+	}
+
+	ak := section.Key("VOLC_ACCESSKEY").String()
+	sk := section.Key("VOLC_SECRETKEY").String()
+
+	return ak, sk, nil
+}
+
 func main() {
 	spaceName, inputDirectoryPath, outputDirectoryPath := cliParams()
 
+	currentDir, err := os.Getwd()
+
+	if err != nil {
+		fmt.Printf("Error: %s\n", err.Error())
+		os.Exit(1)
+	}
+
+	configPath := filepath.Join(currentDir, "config.ini")
 	resultPath := filepath.Join(outputDirectoryPath, "results.ini")
 
 	if !isDirectoryExists(inputDirectoryPath) || !isDirectoryExists(outputDirectoryPath) {
 		os.Exit(1)
 	}
 
-	// read VOLC_ACCESSKEY & VOLC_SECRETKEY from env automatically
+	ak, sk, err := readConfigINI(configPath)
+
+	if err != nil {
+		fmt.Printf("Error: %s\n", err.Error())
+		os.Exit(1)
+	}
+
 	client := vod.NewInstanceWithRegion(base.RegionCnNorth1)
+	client.SetCredential(base.Credentials{
+		AccessKeyID:     ak,
+		SecretAccessKey: sk,
+	})
 
 	results, err := uploadVideosInDirectory(client, spaceName, inputDirectoryPath, outputDirectoryPath)
 
